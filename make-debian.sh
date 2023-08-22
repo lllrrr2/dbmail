@@ -24,7 +24,7 @@ execute(){
 
 echo >$LOG
 execute 'tools'	'apt -y install pkg-config autoconf libtool'
-execute 'prerequisites' 'apt -y install libssl-dev  libgmime-2.6-dev libmhash-dev libssl-dev  libevent-dev libzdb-dev flex libsystemd-dev libjemalloc-dev'
+execute 'prerequisites' 'apt -y install libssl-dev  libgmime-3.0-dev libmhash-dev libssl-dev  libevent-dev libzdb-dev flex libsystemd-dev libjemalloc-dev'
 execute 'unarchive' 'apt -y install tar unzip'
 
 
@@ -70,7 +70,7 @@ execute '	make install' 'make install'
 echo "Install dbmail" >>$LOG
 echo "DBMAIL"
 LIBDBMAIL_DIR=$L
-LIBDBMAIL_NAME="dbmail-3.2.6"
+LIBDBMAIL_NAME="dbmail-3.3.0"
 cd $LIBDBMAIL_DIR
 pwd
 execute '	configure' './configure --prefix=/usr --exec-prefix=/usr --sysconfdir=/etc --enable-systemd --with-logdir'

@@ -1,28 +1,27 @@
+# DBMail
 
 [![Build Status](https://travis-ci.org/dbmail/dbmail.svg?branch=master)](https://travis-ci.org/dbmail/dbmail)
 
-> 
->   (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+> Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 >
->   (c) 2004-2014 NFG Net Facilities Group BV, The Netherlands, support@nfg.nl
+> Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
 >
->   (c) 2000-2005 IC&S, The Netherlands
+> Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
 >
+> Copyright (c) 2000-2006 IC&S, The Netherlands
 
-What is it?
-===========
+## What is it?
 
 DBMail is a collection of programs that enables email to be stored in and
 retrieved from a database. 
 
 Read the INSTALL file for installation of DBMail.
 
-Why is it useful?
-==================
+## Why is it useful?
 
 - it enables you to create mailboxes without the need of systemusers.
 
-- Email is more effeciently stored and therefore it can be inserted an retrieved much faster dan any
+- Email is more effeciently stored and therefore it can be inserted an retrieved much faster than any
   regular system (DBMail is currently able to retrieve aprox. 250 mail messages per second)
 
 - It's scalable. You can run the dbmail programs on different servers talking to the same
@@ -33,8 +32,7 @@ Why is it useful?
   is done through the database.
 
 
-Who created it?
-===============
+## Who created it?
 
 DBMail was originally created by IC&S in the Netherlands.
 
@@ -46,50 +44,42 @@ DBMail is now a community effort to create a fast, effecient and scalable databa
 mailingsystem. Both IC&S and NFG are fully behind opensource and the GPL. Therefore DBMail has the
 GPL licence.
 
-Paul provides commercial support for this product. For more information about this you can send an
-email to support@nfg.nl.
+Support is available by raising an issue at https://github.com/dbmail/dbmail
 
-How do i install it?
-====================
+## How do i install it?
 
-Check the different README files and the wiki pages on dbmail.org for detailed 
+Check the different README files and on https://dbmail.org for detailed
 information and howtos.
 
-Future
-======
+## Future
 
 Check the website for further DBMail plans.
 
-What kind of licence is DBMail?
-===============================
+## What kind of licence is DBMail?
 
 DBMail uses the GPL version 2 licence. 
 
 It's included in the COPYING file.
 
 
-Installation Procedure
-======================
+## Installation Procedure
 
-Dependencies
-------------
+### Dependencies
 
-* Database: MySQL 5.0 or better, PostgreSQL 8.3+, Sqlite3, Oracle
-* Glib: (>= 2.16.0)
-* GMime: (>= 2.6.20)
+* Database: Current versions of MySQL, PostgreSQL, Sqlite3 and Oracle
+* Glib: (>= 2.16)
+* GMime: (>= 3 (3.2))
 * OpenSSL
 * libmhash
 * libzdb (http://www.tildeslash.com/libzdb/)
-* libevent: (>= 2.0.21)
+* libevent: (>= 2.1)
 * Optional: libsieve (>= 2.2.1) (https://github.com/sodabrew/libsieve)
 * Optional: jemalloc
 
-Installing
-----------
+### Installing
+
 * Download DBMail package
 * Install dependencies (some provided from your linux distribution and some (libzdb and/or libsieve) need to be compiled
 * ./configure
 * make 
 * make install
-
--------------------------------------------

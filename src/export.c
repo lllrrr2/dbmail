@@ -1,6 +1,9 @@
 /*
- Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+ Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
  Copyright (C) 2007 Aaron Stone aaron@serendity.cx
+ Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+ Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -288,7 +291,7 @@ int main(int argc, char *argv[])
 	setvbuf(stdout, 0, _IONBF, 0);
 
 	small_pool = mempool_open();
-	g_mime_init(GMIME_ENABLE_RFC2047_WORKAROUNDS);
+	g_mime_init();
 
 	config_get_file();
 	/* get options */

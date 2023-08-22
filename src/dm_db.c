@@ -1,7 +1,8 @@
-/*  */
 /*
-  Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
- Copyright (c) 2004-2012 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (C) 1999-2004 IC & S  dbmail@ic-s.nl
+ Copyright (c) 2004-2013 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+ Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
   This program is free software; you can redistribute it and/or 
   modify it under the terms of the GNU General Public License 
@@ -195,11 +196,9 @@ int db_connect(void)
 {
 	int sweepInterval = 60;
 	Connection_T c;
-	GString *dsn;
-	GString *uri;
 
 	if (strlen(db_params.dburi) != 0) {
-		uri = g_string_new("");
+		GString *uri = g_string_new("");
 		g_string_append_printf(uri,"%s", db_params.dburi);
 		//add application-name to the uri, only if postgresql and application-name parameter was not added.
 		if ( strncmp(uri->str,"postgresql:",11) == 0 && !strstr(uri->str,"application-name") ){
@@ -214,13 +213,13 @@ int db_connect(void)
 		dburi = URL_new(uri->str);
 		g_string_free(uri,TRUE);
 	} else {
-		dsn = g_string_new("");
+		GString *dsn = g_string_new("");
 		g_string_append_printf(dsn,"%s://",db_params.driver);
-		if (db_params.host)
+		if (*db_params.host)
 			g_string_append_printf(dsn,"%s", db_params.host);
 		if (db_params.port)
 			g_string_append_printf(dsn,":%u", db_params.port);
-		if (db_params.db) {
+		if (*db_params.db) {
 			if (SMATCH(db_params.driver,"sqlite")) {
 
 				/* expand ~ in db name to HOME env variable */
@@ -238,12 +237,12 @@ int db_connect(void)
 				g_string_append_printf(dsn,"/%s", db_params.db);
 			}
 		}
-		if (db_params.user && strlen((const char *)db_params.user)) {
+		if (*db_params.user && strlen((const char *)db_params.user)) {
 			g_string_append_printf(dsn,"?user=%s", db_params.user);
-			if (db_params.pass && strlen((const char *)db_params.pass)) 
+			if (*db_params.pass && strlen((const char *)db_params.pass))
 				g_string_append_printf(dsn,"&password=%s", db_params.pass);
 			if (SMATCH(db_params.driver,"mysql")) {
-				if (db_params.encoding && strlen((const char *)db_params.encoding))
+				if (*db_params.encoding && strlen((const char *)db_params.encoding))
 					g_string_append_printf(dsn,"&charset=%s", db_params.encoding);
 			}
 		}
@@ -482,7 +481,7 @@ gboolean db_update(const char *q, ...)
 PreparedStatement_T db_stmt_prepare(Connection_T c, const char *q, ...)
 {
 	va_list ap, cp;
-	char *query;
+	gchar *query;
 	PreparedStatement_T s;
 
 	va_start(ap, q);
@@ -491,8 +490,8 @@ PreparedStatement_T db_stmt_prepare(Connection_T c, const char *q, ...)
 	va_end(cp);
 	va_end(ap);
 
-	TRACE(TRACE_DATABASE,"[%p] [%s]", c, query);
-	s = Connection_prepareStatement(c, "%s", (const char *)query);
+	TRACE(TRACE_DATABASE,"[%p] [%s]", c, q);
+	s = Connection_prepareStatement(c, "%s", query);
 	g_free(query);
 	return s;
 }
@@ -587,25 +586,25 @@ uint64_t db_insert_result(Connection_T c, ResultSet_T r)
 
 	/* In PostgreSQL 9.1 lastRowId is _not_ always zero
 	 *
-dbmail=# INSERT INTO dbmail_physmessage (internal_date) VALUES 
+dbmail=# INSERT INTO dbmail_physmessage (internal_date) VALUES
 dbmail-# (TO_TIMESTAMP('2013-07-20 07:22:34'::text, 'YYYY-MM-DD HH24:MI:SS')) RETURNING id;
-    id    
+    id
 ----------
  29196224
 (1 row)
 
 INSERT 0 1
 dbmail=# INSERT INTO dbmail_messages(mailbox_idnr, physmessage_id, unique_id,recent_flag, status) VALUES (10993, 29196223, 'acc98da420bfe6d3dc2c707a9863001c', 1, 5) RETURNING message_idnr;
- message_idnr 
+ message_idnr
 --------------
      36650725
 (1 row)
 
 INSERT 82105867 1
 	 *
-	 * Connection_lastRowId(c) is returning the OID instead of 
+	 * Connection_lastRowId(c) is returning the OID instead of
 	 * the message_idnr we are expecting.
-	 * However, we are expecting only one row to be returned so 
+	 * However, we are expecting only one row to be returned so
 	 * we should always use db_result_get_u64(r, 0);
 	 */
 	if (db_params.db_driver == DM_DRIVER_POSTGRESQL) {
@@ -613,7 +612,7 @@ INSERT 82105867 1
 	}
 
 	// lastRowId is always zero for pgsql tables without OIDs
-	// or possibly for sqlite after calling executeQuery but 
+	// or possibly for sqlite after calling executeQuery but
 	// before calling db_result_next
 
 	else if ((id = (uint64_t )Connection_lastRowId(c)) == 0) { // mysql
@@ -1016,6 +1015,7 @@ static int check_upgrade_step(int from_version, int to_version)
 	else
 		result = DM_EQUERY;
 
+	query = NULL;
 	db_con_close(c);
 
 	return result;
@@ -1026,7 +1026,7 @@ int db_check_version(void)
 	Connection_T c = db_con_get();
 	volatile int ok = 0;
 	volatile int db = 0;
-	volatile long version = config_get_app_version();
+	// volatile long version = config_get_app_version();
 	/* @todo: use version to run upgrades */
 	TRY
 		if (db_query(c, db_get_sql(SQL_TABLE_EXISTS), DBPFX, "users"))
@@ -2987,10 +2987,19 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 	       uint64_t * newmsg_idnr, gboolean recent)
 {
 	Connection_T c; ResultSet_T r;
+	PreparedStatement_T s;
 	uint64_t msgsize;
 	char *frag;
 	int valid=FALSE;
 	char unique_id[UID_SIZE];
+	int tmp_physmessage = 0;
+	int tmp_seen = 0;
+	int tmp_answered = 0;
+	int tmp_deleted = 0;
+	int tmp_flagged = 0;
+	int tmp_recent = 0;
+	int tmp_draft = 0;
+	int tmp_status = 0;
 
 	/* Get the size of the message to be copied. */
 	if (! (msgsize = message_get_size(msg_idnr))) {
@@ -3015,20 +3024,59 @@ int db_copymsg(uint64_t msg_idnr, uint64_t mailbox_to, uint64_t user_idnr,
 	TRY
 		db_begin_transaction(c);
 		create_unique_id(unique_id, msg_idnr);
-		if (db_params.db_driver == DM_DRIVER_ORACLE) {
-			db_exec(c, "INSERT INTO %smessages ("
-				"mailbox_idnr,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,unique_id,status)"
-				" SELECT %" PRIu64 ",physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,%d,draft_flag,'%s',status"
-				" FROM %smessages WHERE message_idnr = %" PRIu64 " %s",DBPFX, mailbox_to, recent, unique_id, DBPFX, msg_idnr, frag);
-			*newmsg_idnr = db_get_pk(c, "messages");
-		} else {
-			r = db_query(c, "INSERT INTO %smessages ("
-				"mailbox_idnr,physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,recent_flag,draft_flag,unique_id,status)"
-				" SELECT %" PRIu64 ",physmessage_id,seen_flag,answered_flag,deleted_flag,flagged_flag,%d,draft_flag,'%s',status"
-				" FROM %smessages WHERE message_idnr = %" PRIu64 " %s",DBPFX, mailbox_to, recent, unique_id, DBPFX, msg_idnr, frag);
-			*newmsg_idnr = db_insert_result(c, r);
+		s = db_stmt_prepare(c,
+			"SELECT"
+			"  physmessage_id,\n"
+			"  seen_flag,\n"
+			"  answered_flag,\n"
+			"  deleted_flag,\n"
+			"  flagged_flag,\n"
+			"  recent_flag,\n"
+			"  draft_flag,\n"
+			"  status\n"
+			"FROM %smessages\n"
+			"WHERE message_idnr = ?", DBPFX);
+		db_stmt_set_u64(s, 1, msg_idnr);
+		r = db_stmt_query(s);
+		if (db_result_next(r)) {
+			tmp_physmessage = db_result_get_u64(r, 0);
+			tmp_seen = db_result_get_bool(r, 1);
+			tmp_answered = db_result_get_int(r, 2);
+			tmp_deleted = db_result_get_int(r, 3);
+			tmp_flagged = db_result_get_int(r, 4);
+			tmp_recent = db_result_get_int(r, 5);
+			tmp_draft = db_result_get_int(r, 6);
+			tmp_status = db_result_get_int(r, 7);
 		}
+
+		s = db_stmt_prepare(c,
+			"INSERT INTO %smessages (\n"
+			"mailbox_idnr,\n"
+			"physmessage_id,\n"
+			"seen_flag,\n"
+			"answered_flag,\n"
+			"deleted_flag,\n"
+			"flagged_flag,\n"
+			"recent_flag,\n"
+			"draft_flag,\n"
+			"unique_id,\n"
+			"status)\n"
+		"VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?) %s", DBPFX, frag);
+		db_stmt_set_u64(s, 1, mailbox_to);
+		db_stmt_set_u64(s, 2, tmp_physmessage);
+		db_stmt_set_int(s, 3, tmp_seen);
+		db_stmt_set_int(s, 4, tmp_answered);
+		db_stmt_set_int(s, 5, tmp_deleted);
+		db_stmt_set_int(s, 6, tmp_flagged);
+		db_stmt_set_int(s, 7, tmp_recent);
+		db_stmt_set_int(s, 8, tmp_draft);
+		db_stmt_set_str(s, 9, unique_id);
+		db_stmt_set_int(s, 10, tmp_status);
+		r = db_stmt_query(s);
+		*newmsg_idnr = db_insert_result(c, r);
+
 		db_commit_transaction(c);
+		TRACE(TRACE_INFO, "message [%" PRIu64 "] inserted", *newmsg_idnr);
 	CATCH(SQLException)
 		LOG_SQLERROR;
 		db_rollback_transaction(c);
@@ -3270,7 +3318,6 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 	Connection_T c;
 	size_t i, pos = 0;
 	volatile int seen = 0, count = 0;
-	int is_flag=0;
 	INIT_QUERY;
 
 	memset(query,0,DEF_QUERYSIZE);
@@ -3279,7 +3326,6 @@ int db_set_msgflag(uint64_t msg_idnr, int *flags, GList *keywords, int action_ty
 	for (i = 0; flags && i < IMAP_NFLAGS; i++) {
 		if (flags[i]){
 			TRACE(TRACE_DEBUG,"set %s for action type %d", db_flag_desc[i], action_type);
-			is_flag = 1;
 		}
 
 		switch (action_type) {
@@ -4460,39 +4506,39 @@ int db_rehash_store(void)
 }
 
 int db_append_msg(const char *msgdata, uint64_t mailbox_idnr, uint64_t user_idnr,
-		char* internal_date, uint64_t * msg_idnr, gboolean recent)
+		const char* internal_date, uint64_t * msg_idnr, gboolean recent)
 {
-        DbmailMessage *message;
+	DbmailMessage *message;
 	int result;
 
 	if (! mailbox_is_writable(mailbox_idnr)) return DM_EQUERY;
 
-        message = dbmail_message_new(NULL);
-        message = dbmail_message_init_with_string(message, msgdata);
-	dbmail_message_set_internal_date(message, (char *)internal_date);
-        
-        if (dbmail_message_store(message) < 0) {
+	message = dbmail_message_new(NULL);
+	message = dbmail_message_init_with_string(message, msgdata);
+	dbmail_message_set_internal_date(message, internal_date);
+
+	if (dbmail_message_store(message) < 0) {
 		dbmail_message_free(message);
 		return DM_EQUERY;
 	}
 
 	result = db_copymsg(message->msg_idnr, mailbox_idnr, user_idnr, msg_idnr, recent);
 	db_delete_message(message->msg_idnr);
-        dbmail_message_free(message);
-	
-        switch (result) {
-            case -2:
-                    TRACE(TRACE_DEBUG, "error copying message to user [%" PRIu64 "],"
-                            "maxmail exceeded", user_idnr);
-                    return -2;
-            case -1:
-                    TRACE(TRACE_ERR, "error copying message to user [%" PRIu64 "]", 
-                            user_idnr);
-                    return -1;
-        }
-                
-        TRACE(TRACE_NOTICE, "message id=%" PRIu64 " is inserted", *msg_idnr);
-        
-        return (db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN)?FALSE:TRUE);
+	dbmail_message_free(message);
+
+	switch (result) {
+		case -2:
+			TRACE(TRACE_DEBUG, "error copying message to user [%" PRIu64 "],"
+				"maxmail exceeded", user_idnr);
+			return -2;
+		case -1:
+			TRACE(TRACE_ERR, "error copying message to user [%" PRIu64 "]",
+				user_idnr);
+			return -1;
+	}
+
+	TRACE(TRACE_NOTICE, "message id=%" PRIu64 " is inserted", *msg_idnr);
+
+	return (db_set_message_status(*msg_idnr, MESSAGE_STATUS_SEEN)?FALSE:TRUE);
 }
 

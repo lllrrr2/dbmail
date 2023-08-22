@@ -1,5 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
+
+## [3.3.1] - 2022-10-15
+- Fixed issue #175 with mysql 8.0.31 and libzdb
+
+## [3.3.0] - 2022-05-26
+- gmime updated to 3
+
 ## [3.2.6] - 2022-01-09
 ### WARNING
 - the maintenance(dbmail-util) process should be issues in a maintenance window do to massive changes on database, see [#108]

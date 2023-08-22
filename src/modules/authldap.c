@@ -1,6 +1,8 @@
 /*
  Copyright (c) 2002 Aaron Stone, aaron@serendipity.cx
  Copyright (c) 2004-2010 NFG Net Facilities Group BV support@nfg.nl
+ Copyright (c) 2014-2019 Paul J Stevens, The Netherlands, support@nfg.nl
+ Copyright (c) 2020-2023 Alan Hicks, Persistent Objects Ltd support@p-o.co.uk
 
  This program is free software; you can redistribute it and/or 
  modify it under the terms of the GNU General Public License 
@@ -271,33 +273,37 @@ static LDAPMessage * authldap_search(const gchar *query)
 	char **_ldap_attrs = NULL;
 	int err = -1; // Start wanting success
 	int c = 0;
+	const char *err_msg = NULL;
 	int c_tries = _ldap_cfg.query_timeout_int;
 	LDAP *_ldap_conn;
 
 	g_return_val_if_fail(query!=NULL, NULL);
 
-	_ldap_conn = ldap_con_get();
-
 	TRACE(TRACE_DEBUG, " [%s]", query);
 
 	while (err != 0 && c++ < c_tries) {
 		// Loop until success or too many retries
+		_ldap_conn = ldap_con_get();
 
 		// timeout must be NULL as any value times out!
-		err = ldap_search_ext_s(_ldap_conn, _ldap_cfg.base_dn, _ldap_cfg.scope_int, 
-				query, _ldap_attrs, _ldap_attrsonly, NULL, NULL, NULL, LDAP_NO_LIMIT, &ldap_res);
+		err = ldap_search_ext_s(_ldap_conn, _ldap_cfg.base_dn, _ldap_cfg.scope_int,
+			query, _ldap_attrs, _ldap_attrsonly, NULL, NULL, NULL, LDAP_NO_LIMIT, &ldap_res);
 
 		switch (err) {
 			case LDAP_SUCCESS:
 				return ldap_res;
 				break;
 			case LDAP_SERVER_DOWN:
-				TRACE(TRACE_WARNING, "LDAP gone away: %s. Trying again(%d/%d).", ldap_err2string(err), c, c_tries);
+				ldap_get_option(_ldap_conn, LDAP_OPT_DIAGNOSTIC_MESSAGE, &err_msg);
+				TRACE(TRACE_WARNING, "LDAP gone away(%d): %s. Trying again(%d/%d). Error message: %s", err, ldap_err2string(err), c, c_tries, err_msg);
+				ldap_memfree(&err_msg);
 				break;
 			default:
 				TRACE(TRACE_ERR, "LDAP error(%d): %s. Trying again (%d/%d).", err, ldap_err2string(err), c, c_tries);
 				break;
 		}
+		ldap_msgfree(ldap_res);
+		ldap_unbind_ext(_ldap_conn, NULL, NULL);
 		sleep(1); // Search failed. Wait before trying again.
 	}
 
@@ -1344,7 +1350,7 @@ GList * auth_get_user_aliases(uint64_t user_idnr)
 	GList *entlist, *fldlist, *attlist;
 	
 	g_string_printf(t,"%s=%" PRIu64 "", _ldap_cfg.field_nid, user_idnr);
-	if ((entlist = __auth_get_every_match(t->str, fields))) {
+	if ((entlist = __auth_get_every_match(t->str, (const char **)fields))) {
 		entlist = g_list_first(entlist);
 		fldlist = g_list_first(entlist->data);
 		attlist = g_list_first(fldlist->data);
